@@ -1,24 +1,26 @@
 ---
 name: keep-scientific-code-simple
-description: Review scientific and data-processing code for unsupported defensive branches, excessive function extraction, premature abstraction, and other complexity that obscures the calculation. Use only when the user explicitly invokes $keep-scientific-code-simple. Do not trigger automatically based on the presence of MATLAB, Python, R, Julia, Fortran, scientific code, code review, or simplification tasks.
+description: Review scientific and data-processing code primarily for unsupported defensive branches and unnecessary complexity. Reconstruct the core algorithm, compare it with the identified plan, and check whether file-header and key comments accurately document the calculation. Use only when the user explicitly invokes $keep-scientific-code-simple. Do not trigger automatically based on the presence of MATLAB, Python, R, Julia, Fortran, scientific code, code review, or simplification tasks.
 ---
 
 # Keep Scientific Code Simple
 
-Review the calculation before its scaffolding. Prefer direct, evidence-based code over speculative safeguards and abstractions.
+Understand and document the calculation before reviewing its scaffolding. Keep unsupported defenses as the primary target, using plan alignment and accurate comments as necessary evidence. Prefer direct, evidence-based code over speculative safeguards and abstractions.
 
 ## Workflow
 
 Follow these phases in order:
 
 1. **Set scope.** Identify the relevant plan, target code, data range, expected outputs, and allowed execution environment. Read only the artifacts the user identified unless later permission expands the scope.
-2. **Study the plan.** Extract the core calculation, data order, units, grids, masks, averaging rules, missing-data policy, and required outputs. Keep this focused on facts needed to judge simplicity.
-3. **Study and run the code.** Restate the implementation in 3–7 ordered steps. Run static analysis and the smallest representative execution that can reveal actual behavior. Inspect runtime errors, warnings, branches reached, output shapes, missing values, and intermediate results when useful.
-4. **Scan systematically.** Inventory every failure branch, fallback, early return, `continue`, default value, empty result, deliberate `NaN`, single-use function, wrapper, dynamic field system, status protocol, and speculative extension point.
-5. **Gate A: accept review decisions.** Report one important decision at a time, starting with the issue having the greatest effect on correctness or comprehension. Present evidence from the plan, code, data, and execution. Let the user accept, reject, or adjust the conclusion, record that decision, and continue without modifying files.
-6. **Gate B: approve the exact edit plan.** After all decisions are confirmed, consolidate them into one final edit plan. List every file and code location, the exact deletion, replacement, or addition, all effects on comments, logs, variable names, section numbering, and outputs, whether scientific results will change, and the planned verification. Then ask exactly: “是否按上述精确方案修改？”
-7. **Gate C: execute the approved plan.** Edit only after the user explicitly replies with an instruction equivalent to execute or modify. Save a snapshot first, apply only the approved differences, inspect the actual diff, restore any unapproved difference, and run the approved verification.
-8. **Report the actual result.** State the lines actually changed, recommendations not executed, verification results, and whether any unapproved difference remains.
+2. **Study the plan.** Extract the core calculation, data order, units, grids, masks, averaging rules, missing-data policy, and required outputs. Restate the planned calculation in 3–7 ordered steps.
+3. **Reconstruct the code.** Without assuming its comments are correct, restate the implementation in 3–7 ordered steps. Identify the actual inputs, outputs, scientific conventions, and major transformations.
+4. **Compare plan, code, and comments.** Map the planned steps to the implemented steps. Note only differences that affect the calculation, its interpretation, or the evidence needed to judge defensive code. Check whether the file header and section comments accurately describe the implementation.
+5. **Study actual behavior.** Run static analysis and the smallest representative execution that can reveal actual behavior. Inspect runtime errors, warnings, branches reached, output shapes, missing values, and intermediate results when useful.
+6. **Scan defensive complexity systematically.** Inventory every failure branch, fallback, early return, `continue`, default value, empty result, deliberate `NaN`, single-use function, wrapper, dynamic field system, status protocol, and speculative extension point.
+7. **Gate A: accept review decisions.** Report one important decision at a time, starting with the issue having the greatest effect on correctness or comprehension. Present evidence from the plan, code, comments, data, and execution. Let the user accept, reject, or adjust the conclusion, record that decision, and continue without modifying files.
+8. **Gate B: approve the exact edit plan.** After all decisions are confirmed, consolidate them into one final edit plan. List every file and code location, the exact deletion, replacement, or addition, all effects on comments, logs, variable names, section numbering, and outputs, whether scientific results will change, and the planned verification. Then ask exactly: “是否按上述精确方案修改？”
+9. **Gate C: execute the approved plan.** Edit only after the user explicitly replies with an instruction equivalent to execute or modify. Save a snapshot first, apply only the approved differences, inspect the actual diff, restore any unapproved difference, and run the approved verification.
+10. **Report the actual result.** State the lines actually changed, recommendations not executed, verification results, and whether any unapproved difference remains.
 
 Do not skip execution merely because the code looks correct. If execution is impossible because inputs, software, hardware, or access are unavailable, state the missing evidence instead of guessing.
 
@@ -51,6 +53,54 @@ Do not use summaries such as “simplify this section” in place of an exact pl
 - Do not opportunistically change adjacent comments, logs, formatting, names, section numbers, outputs, other scan findings, called functions, or other scripts.
 - Do not make a necessary companion change unless it was separately listed and approved in advance.
 - Compare the actual diff with the snapshots after editing. If the diff exceeds the approved plan, restore the unapproved parts before reporting completion.
+
+## Establish the Calculation and Check Its Comments
+
+- Derive the planned algorithm and the implemented algorithm independently. Do not use comments to fill gaps in the code or use the code to silently rewrite the plan.
+- When a plan exists, map each core planned step to the corresponding code section. Classify material differences as aligned, changed, missing, or still unknown.
+- When no plan is available, state that plan conformance cannot be judged. Do not invent the intended method.
+- Treat plan alignment as evidence for the simplicity review, not as a general requirements audit.
+- Check that the file header states the actual purpose, core steps, inputs, and outputs. Include units, grids, time bases, masks, or missing-data rules only when they are important to interpreting the calculation.
+- Check that section comments follow the real algorithmic stages. Do not require a section merely because a template contains one.
+- Prefer comments that explain scientific reasons, verified data invariants, units, non-obvious transformations, or justified exceptions. Flag comments that merely restate code only when they obscure more useful information.
+- Treat stale or contradictory comments as review findings when they can mislead the calculation or the judgment of defensive logic.
+- Avoid author blocks, change histories, fragile line-number references, and other boilerplate that does not help reconstruct the calculation.
+
+For MATLAB scripts, use this as a lightweight review baseline rather than a mandatory fixed layout:
+
+```matlab
+%% script_name.m
+%
+% 功能:
+%   用 1–3 句话说明脚本完成的科学计算及其在处理流程中的位置。
+%
+% 核心步骤:
+%   1. 读取并统一……
+%   2. 按……计算……
+%   3. 根据……筛选或聚合……
+%   4. 保存……
+%
+% 输入:
+%   1. 数据或上游文件：内容，以及必要的单位或维度
+%
+% 输出:
+%   1. 输出文件或变量：用途
+%
+% 关键约定:  % 仅在确有必要时保留
+%   时间基准、坐标顺序、单位、掩膜或缺测处理。
+
+%% 1. 参数与输入
+
+%% 2. 数据读取
+
+%% 3. 核心计算
+
+%% 4. 筛选或统计聚合
+
+%% 5. 保存结果
+```
+
+Remove empty sections and adapt names and numbering to the actual algorithm. Do not add `clear`, `clc`, `close all`, local functions, or other executable scaffolding merely to match the template.
 
 ## Run Code to Learn Actual Behavior
 
@@ -102,9 +152,9 @@ Keep a function only when it provides concrete value by doing at least one of th
 
 Recommend inlining a single-use function when it merely moves values, renames variables, constructs a trivial struct, wraps a short expression, or forces the reader to jump elsewhere without lowering cognitive complexity. A single call site alone is not sufficient reason to inline.
 
-## Use the Plan as Supporting Evidence
+## Keep Plan Alignment Focused
 
-Use the plan, equations, units, grids, masks, averaging rules, and required outputs to determine whether complexity or failure handling is justified. Plan conformance is secondary to the simplicity review; do not turn the review into a general requirements audit.
+Use the plan, equations, units, grids, masks, averaging rules, missing-data policy, and required outputs to determine whether complexity or failure handling is justified. Report plan-code differences that affect the scientific calculation or the interpretation of defensive behavior. Leave unrelated requirement, style, and documentation issues outside the review.
 
 ## Search Only With Permission
 
@@ -122,7 +172,7 @@ For each decision, provide:
 4. The smallest recommendation.
 5. A clear choice for the user to accept, reject, or adjust.
 
-After the user responds, record the decision and proceed to the next decision without editing. Only after all decisions are complete should you produce the consolidated exact edit plan and request one execution authorization.
+Before the first decision, briefly show the planned 3–7 steps, the implemented 3–7 steps, and any material alignment or comment gap. After the user responds, record the decision and proceed to the next decision without editing. Only after all decisions are complete should you produce the consolidated exact edit plan and request one execution authorization.
 
 Avoid generic checklists, quality scores, style nitpicks, and unrelated refactors. Cite file and line references when available.
 
