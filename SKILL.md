@@ -1,6 +1,6 @@
 ---
 name: keep-scientific-code-simple
-description: Keep scientific and data-processing code simple by reviewing unsupported defensive branches, excessive function extraction, premature abstraction, and other over-engineering that obscures the calculation. Use when reviewing or simplifying MATLAB, Python, R, Julia, Fortran, or similar research code. Keep reviews read-only until the user separately approves an exact edit plan and explicitly authorizes execution. Follow a plan-to-code-to-scan-to-review-to-fix workflow, run relevant code to investigate actual behavior, and discuss one important decision at a time. Ask permission before searching the repository for upstream coding style or researching community implementations.
+description: Review scientific and data-processing code for unsupported defensive branches, excessive function extraction, premature abstraction, and other complexity that obscures the calculation. Use only when the user explicitly invokes $keep-scientific-code-simple. Do not trigger automatically based on the presence of MATLAB, Python, R, Julia, Fortran, scientific code, code review, or simplification tasks.
 ---
 
 # Keep Scientific Code Simple
