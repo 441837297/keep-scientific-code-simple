@@ -1,6 +1,6 @@
 ---
 name: keep-scientific-code-simple
-description: Keep scientific and data-processing code simple by reviewing unsupported defensive branches, excessive function extraction, premature abstraction, and other over-engineering that obscures the calculation. Use when reviewing or simplifying MATLAB, Python, R, Julia, Fortran, or similar research code. Follow a plan-to-code-to-scan-to-review-to-fix workflow, run relevant code to investigate actual behavior, and discuss one important decision at a time. Ask permission before searching the repository for upstream coding style or researching community implementations.
+description: Keep scientific and data-processing code simple by reviewing unsupported defensive branches, excessive function extraction, premature abstraction, and other over-engineering that obscures the calculation. Use when reviewing or simplifying MATLAB, Python, R, Julia, Fortran, or similar research code. Keep reviews read-only until the user separately approves an exact edit plan and explicitly authorizes execution. Follow a plan-to-code-to-scan-to-review-to-fix workflow, run relevant code to investigate actual behavior, and discuss one important decision at a time. Ask permission before searching the repository for upstream coding style or researching community implementations.
 ---
 
 # Keep Scientific Code Simple
@@ -15,16 +15,48 @@ Follow these phases in order:
 2. **Study the plan.** Extract the core calculation, data order, units, grids, masks, averaging rules, missing-data policy, and required outputs. Keep this focused on facts needed to judge simplicity.
 3. **Study and run the code.** Restate the implementation in 3–7 ordered steps. Run static analysis and the smallest representative execution that can reveal actual behavior. Inspect runtime errors, warnings, branches reached, output shapes, missing values, and intermediate results when useful.
 4. **Scan systematically.** Inventory every failure branch, fallback, early return, `continue`, default value, empty result, deliberate `NaN`, single-use function, wrapper, dynamic field system, status protocol, and speculative extension point.
-5. **Report one decision at a time.** Start with the issue having the greatest effect on correctness or comprehension. Present evidence from the plan, code, data, and execution. Let the user decide before continuing. Do not modify code, plans, or issue trackers during this discussion.
-6. **Consolidate and fix.** After all decisions are confirmed, summarize them and modify only the approved items. Prefer surgical edits that preserve the scientific calculation and existing structure.
-7. **Run and verify.** Execute the relevant checks again. Confirm the calculation still runs, approved simplifications are effective, outputs retain the intended meaning, and no new fallback hides a failure. Report commands or tools used and the observed result.
+5. **Gate A: accept review decisions.** Report one important decision at a time, starting with the issue having the greatest effect on correctness or comprehension. Present evidence from the plan, code, data, and execution. Let the user accept, reject, or adjust the conclusion, record that decision, and continue without modifying files.
+6. **Gate B: approve the exact edit plan.** After all decisions are confirmed, consolidate them into one final edit plan. List every file and code location, the exact deletion, replacement, or addition, all effects on comments, logs, variable names, section numbering, and outputs, whether scientific results will change, and the planned verification. Then ask exactly: “是否按上述精确方案修改？”
+7. **Gate C: execute the approved plan.** Edit only after the user explicitly replies with an instruction equivalent to execute or modify. Save a snapshot first, apply only the approved differences, inspect the actual diff, restore any unapproved difference, and run the approved verification.
+8. **Report the actual result.** State the lines actually changed, recommendations not executed, verification results, and whether any unapproved difference remains.
 
 Do not skip execution merely because the code looks correct. If execution is impossible because inputs, software, hardware, or access are unavailable, state the missing evidence instead of guessing.
 
+The three gates are independent. Acceptance at Gate A does not authorize Gate B or Gate C. Approval of the plan at Gate B does not authorize any work outside that exact plan.
+
+## Keep Review Read-Only
+
+- Treat requests to review, scan, audit, or suggest simplifications as read-only. Read files, run safe read-only diagnostics, and report findings, but do not modify target code, plans, or issue trackers.
+- Treat confirmation of a conclusion, such as agreeing that a branch can be deleted, only as acceptance of that decision. Record it; do not edit.
+- Treat “continue scanning,” “tell me what else can be cleaned up,” “confirm this issue,” and equivalent language only as authority to continue reviewing and reporting.
+- Do not edit until the user has seen the complete exact edit plan and then separately gives an explicit instruction to execute or modify.
+
+## Require an Exact Edit Plan
+
+Before requesting execution authority, list:
+
+1. every file to modify;
+2. each specific code block or line location;
+3. the exact content to delete, replace, or add;
+4. whether comments, logs, variable names, section numbering, or outputs will change;
+5. whether scientific calculation results will change;
+6. the verification to run after editing.
+
+Do not use summaries such as “simplify this section” in place of an exact plan. Include every necessary companion edit as a separate approved item.
+
+## Apply Only the Approved Diff
+
+- Save a snapshot of every target file before editing.
+- Make surgical edits that implement only the differences shown in the approved final plan.
+- Do not opportunistically change adjacent comments, logs, formatting, names, section numbers, outputs, other scan findings, called functions, or other scripts.
+- Do not make a necessary companion change unless it was separately listed and approved in advance.
+- Compare the actual diff with the snapshots after editing. If the diff exceeds the approved plan, restore the unapproved parts before reporting completion.
+
 ## Run Code to Learn Actual Behavior
 
-- Treat relevant code execution as an authorized part of review and verification.
+- Treat safe, read-only diagnostic execution as an authorized part of review and verification. Obtain additional authority before any run that writes outputs or materially changes state.
 - Start with a safe, small, representative case when a full run is expensive or writes outputs.
+- Keep diagnostic code minimal. Before creating a temporary diagnostic file, state its purpose, size, expected runtime or cost, and location. Prefer short read-only checks, do not create a large temporary script for a simple review, and remove the temporary file when finished.
 - Use the language-appropriate execution and testing tools. For MATLAB, use MATLAB static analysis, evaluation, file execution, and test tools rather than invoking MATLAB through a shell.
 - Run large scientific computations on the configured HPC environment instead of locally.
 - Inspect the real failure condition whenever practical. Do not create a fallback based only on reading the code.
@@ -42,7 +74,7 @@ Do not turn uncertainty into a fallback. For every failure path:
 
 Apply these outcomes:
 
-- If the condition is verified not to occur, remove the fallback and add a concise comment stating the verified input invariant when that fact is not obvious.
+- If the condition is verified not to occur, recommend removing the fallback and, when useful, adding a concise comment stating the verified input invariant. Apply that recommendation only through the approval gates above.
 - If the condition occurs, explain why and how often. Retain a branch only after its behavior is scientifically justified.
 - If the condition is only hypothetical, do not add speculative recovery logic.
 - If the condition cannot be investigated with the available scope, ask the user. Do not silently substitute `continue`, zero, an empty array, a default value, or `NaN` merely to let the program finish.
@@ -90,4 +122,17 @@ For each decision, provide:
 4. The smallest recommendation.
 5. A clear choice for the user to accept, reject, or adjust.
 
+After the user responds, record the decision and proceed to the next decision without editing. Only after all decisions are complete should you produce the consolidated exact edit plan and request one execution authorization.
+
 Avoid generic checklists, quality scores, style nitpicks, and unrelated refactors. Cite file and line references when available.
+
+## Report the Actual Edit
+
+After modification, report:
+
+1. the lines actually changed;
+2. recommendations that remain unexecuted;
+3. verification performed and its results;
+4. whether any unapproved difference exists.
+
+Do not treat a passing static check as proof that the modification scope is correct. Verify the actual diff against the approved plan separately.
