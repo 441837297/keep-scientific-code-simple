@@ -1,0 +1,4 @@
+interface:
+  display_name: "Keep Scientific Code Simple"
+  short_description: "Remove unsupported defenses and needless abstractions"
+  default_prompt: "Use $keep-scientific-code-simple to review this scientific code one evidence-based decision at a time."
